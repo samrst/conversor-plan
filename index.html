@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consolidador de Macrodados | SENAI-BA</title>
+  <link rel="icon" type="image/png" href="img/logo-conversor.png">
+  <meta name="description" content="Aplicação web estática para conversão e consolidação automática de microdados em planilhas de macrodados padronizadas para dashboards. 100% local e seguro.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <!-- SheetJS Library (Local copy with CDN fallback) -->
+  <script src="js/vendor/xlsx.full.min.js"></script>
+  <script>
+    if (!window.XLSX) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- JSZip Library (For high-fidelity Excel template processing) -->
+  <script src="js/vendor/jszip.min.js"></script>
+  <script>
+    if (!window.JSZip) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header" id="appHeader">
+    <div class="header-container">
+      <a href="#" class="header-brand" id="headerBrandLink">
+        <div class="brand-icon-wrapper" aria-hidden="true">
+          <img src="img/logo-senai.png" alt="SENAI-BA" class="senai-logo">
+        </div>
+        <div class="brand-info">
+          <h1>Consolidador de Macrodados</h1>
+          <span class="brand-badge">SENAI-BA • Processamento em Memória</span>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <div class="header-tag" title="Seus arquivos nunca saem deste computador">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnHeaderReset" title="Iniciar nova conversão do zero">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M8 16H3v5"></path>
+          </svg>
+          Reiniciar
+        </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <main class="app-main" id="mainContent">
+
+    <!-- Stepper Progress Navigation -->
+    <nav class="stepper-nav" aria-label="Etapas da conversão" id="stepperNav">
+      <!-- Step 1 -->
+      <button type="button" class="step-item active" data-step="1" id="stepBtn1">
+        <div class="step-number">1</div>
+        <div class="step-content-text">
+          <span class="step-title">Selecionar Modelo</span>
+          <span class="step-subtitle">Objetiva / Prática</span>
+        </div>
+      </button>
+
+      <div class="step-divider" id="stepDiv1"></div>
+
+      <!-- Step 2 -->
+      <button type="button" class="step-item" data-step="2" id="stepBtn2" disabled>
+        <div class="step-number">2</div>
+        <div class="step-content-text">
+          <span class="step-title">Enviar Microdados</span>
+          <span class="step-subtitle">Arquivos XLSX/CSV</span>
+        </div>
+      </button>
+
+      <div class="step-divider" id="stepDiv2"></div>
+
+      <!-- Step 3 -->
+      <button type="button" class="step-item" data-step="3" id="stepBtn3" disabled>
+        <div class="step-number">3</div>
+        <div class="step-content-text">
+          <span class="step-title">Conferir Colunas</span>
+          <span class="step-subtitle">Validação de Campos</span>
+        </div>
+      </button>
+
+      <div class="step-divider" id="stepDiv3"></div>
+
+      <!-- Step 4 -->
+      <button type="button" class="step-item" data-step="4" id="stepBtn4" disabled>
+        <div class="step-number">4</div>
+        <div class="step-content-text">
+          <span class="step-title">Prévia & Exportar</span>
+          <span class="step-subtitle">Macro Padronizado</span>
+        </div>
+      </button>
+    </nav>
+
+    <!-- =========================================================================
+         STEP 1: SELEÇÃO DE MODELO
+         ========================================================================= -->
+    <section class="step-view active" id="stepView1" aria-labelledby="step1Title">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title" id="step1Title">Selecione o Modelo de Conversão</h2>
+              <p class="card-description">Escolha a regra de negócio para a consolidação dos microdados.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="models-grid" id="modelsGrid">
+          <!-- Model 1: Prova Objetiva (Active) -->
+          <div class="model-card selected" data-model-id="prova-objetiva" id="cardModelObjetiva" tabindex="0" role="button" aria-pressed="true">
+            <div class="model-card-top">
+              <div class="model-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <span class="model-badge badge-active">Ativo • Disponível</span>
+            </div>
+            <h3 class="model-name">Prova Objetiva</h3>
+            <p class="model-desc">
+              Consolidação de microdados de Aptos (Principal), Alunos Matriculados (CHP e IFTP) e Participação/Presença em planilha padronizada de 13 colunas.
+            </p>
+            <ul class="model-features-list">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Associação de turmas via TURMADESCRICAO e CODTURMA normalizado com Categoria (CHP/IFTP)
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Tratamento especial SENAI ITED &amp; Semipresencial
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Cálculo de Aptos/Agendados, Inaptos/Não Agendados e Percentuais de Presença
+              </li>
+            </ul>
+          </div>
+
+          <!-- Model 2: Prova Prática (Coming Soon) -->
+          <div class="model-card disabled" data-model-id="prova-pratica" id="cardModelPratica" tabindex="-1" aria-disabled="true">
+            <div class="model-card-top">
+              <div class="model-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+              </div>
+              <span class="model-badge badge-soon">Fase 2 • Em Breve</span>
+            </div>
+            <h3 class="model-name">Prova Prática</h3>
+            <p class="model-desc">
+              Regras de negócio e consolidação de critérios específicos para avaliação prática serão disponibilizadas na próxima versão.
+            </p>
+            <ul class="model-features-list">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-dim);"><circle cx="12" cy="12" r="10"></circle></svg>
+                Regras de negócio a serem definidas
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="actions-bar">
+          <div></div>
+          <button type="button" class="btn btn-primary btn-lg" id="btnStep1Next">
+            Avançar para Envio de Microdados
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         STEP 2: ENVIO DE MICRODADOS
+         ========================================================================= -->
+    <section class="step-view" id="stepView2" aria-labelledby="step2Title">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title" id="step2Title">Carregamento de Microdados</h2>
+              <p class="card-description">Arraste ou selecione as planilhas de microdados da Prova Objetiva.</p>
+            </div>
+          </div>
+
+          <span class="status-pill info" id="activeModelBadge">
+            Modelo Ativo: Prova Objetiva
+          </span>
+        </div>
+
+        <!-- Dropzone Area -->
+        <div class="dropzone-container" id="dropzone" tabindex="0" role="button" aria-label="Área para soltar arquivos">
+          <input type="file" id="fileInput" multiple accept=".xlsx, .xls, .csv" style="display: none;">
+          <div class="dropzone-icon-bubble">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="12" y2="12"></line>
+              <line x1="15" y1="15" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="dropzone-title">Arraste suas planilhas aqui ou clique para selecionar</h3>
+            <p class="dropzone-subtitle">
+              O sistema identifica automaticamente os arquivos pelos nomes: <strong>aptos</strong>, <strong>matriculados chp</strong>, <strong>matriculados iftp</strong> e <strong>participação</strong>.
+            </p>
+          </div>
+          <span class="dropzone-formats">Formatos suportados: .XLSX, .XLS, .CSV</span>
+        </div>
+
+        <!-- Demo Data Helper Banner -->
+        <div class="demo-banner">
+          <div class="demo-banner-text">
+            <strong>Deseja testar sem arquivos reais?</strong> Carregue um conjunto de dados de exemplo do SENAI Bahia com 1 clique.
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnLoadDemoData">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14"></path>
+              <path d="M12 5l7 7-7 7"></path>
+            </svg>
+            Carregar Dados de Exemplo
+          </button>
+        </div>
+
+        <!-- Recognized Files Section -->
+        <div style="margin-top: 1.75rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;">
+            Identificação dos Arquivos
+          </h3>
+          
+          <div class="files-grid" id="filesGridContainer">
+            <!-- Rendered dynamically by JS: Aptos, Matriculados CHP, Matriculados IFTP, Participação cards -->
+          </div>
+        </div>
+
+        <div class="actions-bar">
+          <button type="button" class="btn btn-secondary" id="btnStep2Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Voltar
+          </button>
+          
+          <button type="button" class="btn btn-primary btn-lg" id="btnStep2Next" disabled>
+            Conferir Colunas
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         STEP 3: CONFERÊNCIA OBRIGATÓRIA DAS COLUNAS
+         ========================================================================= -->
+    <section class="step-view" id="stepView3" aria-labelledby="step3Title">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title" id="step3Title">Conferência Obrigatória das Colunas</h2>
+              <p class="card-description">
+                Verifique se os campos necessários foram identificados. Caso algum campo esteja pendente ou necessite de ajuste, clique em <strong>Alterar</strong> para associar manualmente.
+              </p>
+            </div>
+          </div>
+
+          <div id="mappingStatusSummary">
+            <!-- Dynamic overall mapping status badge -->
+          </div>
+        </div>
+
+        <div id="mappingTablesContainer" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <!-- Rendered dynamically by JS: Table for Aptos, Matriculados CHP, Matriculados IFTP, Participacao -->
+        </div>
+
+        <div class="actions-bar">
+          <button type="button" class="btn btn-secondary" id="btnStep3Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Voltar para Arquivos
+          </button>
+
+          <button type="button" class="btn btn-success btn-lg" id="btnProcessMacro" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Processar Regras e Gerar Macrodados
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         STEP 4: PRÉVIA & EXPORTAÇÃO
+         ========================================================================= -->
+    <section class="step-view" id="stepView4" aria-labelledby="step4Title">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" style="color: var(--accent-success); background: var(--accent-success-bg);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <div>
+              <h2 class="card-title" id="step4Title">Macrodados Consolidados</h2>
+              <p class="card-description">
+                Planilha padronizada pronta com exatamente 13 colunas para uso no dashboard.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-success" id="btnExportXLSX">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Exportar XLSX (.xlsx)
+            </button>
+
+            <button type="button" class="btn btn-secondary" id="btnExportCSV">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Exportar CSV (.csv)
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid" id="kpiGridContainer">
+          <!-- Dynamic KPI cards -->
+        </div>
+
+        <!-- Warnings Container -->
+        <div id="warningsContainer">
+          <!-- Rendered dynamically if any inconsistencies occurred -->
+        </div>
+
+        <!-- Table Controls / Search -->
+        <div class="table-toolbar">
+          <div class="search-input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="search-input" id="tableSearchInput" placeholder="Filtrar por escola, curso ou turma...">
+          </div>
+
+          <div style="font-size: 0.8125rem; color: var(--text-muted);" id="tableRowCountLabel">
+            Exibindo 0 linhas
+          </div>
+        </div>
+
+        <!-- Macro Preview Table -->
+        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+          <table class="custom-table" id="macroPreviewTable">
+            <thead>
+              <tr id="macroTableHeaderRow">
+                <!-- 14 Columns Header -->
+              </tr>
+            </thead>
+            <tbody id="macroTableBody">
+              <!-- Rendered rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="actions-bar">
+          <button type="button" class="btn btn-secondary" id="btnStep4Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Ajustar Mapeamento
+          </button>
+
+          <button type="button" class="btn btn-primary" id="btnNewConversion">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+            Nova Conversão
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Column Picker Modal for Manual Association -->
+  <div class="modal-overlay" id="modalColumnPicker" aria-hidden="true" role="dialog" aria-labelledby="modalPickerTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalPickerTitle">Selecionar Coluna</h3>
+          <p class="modal-subtitle" id="modalPickerSubtitle">Arquivo: Planilha</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnModalClose" title="Fechar modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalPickerBody">
+        <!-- Dynamic list of radio options -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnModalCancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnModalConfirm">Confirmar Associação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div>
+        <strong>Consolidador de Macrodados</strong> &bull; Conversor de Planilhas SAEP
+      </div>
+      <div class="footer-privacy-badge" aria-hidden="true">
+          <img src="img/logo-saep.png" alt="SAEP" class="saep-logo">
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main Application Script (ES Module) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
