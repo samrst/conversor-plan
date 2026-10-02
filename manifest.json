@@ -1,0 +1,23 @@
+{
+  "name": "Consolidador de Macrodados",
+  "short_name": "Consolidador",
+  "description": "Consolidador de Macrodados",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2A579A",
+  "icons": [
+    {
+      "src": "./img/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./img/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
