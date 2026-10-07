@@ -193,7 +193,8 @@ export class FileReaderService {
       aptos: ['turmadescricao', 'turma', 'escola', 'curso', 'cpf', 'estudante', 'aluno'],
       matriculados_chp: ['codturma', 'turma', 'unidade', 'curso', 'matriculado', 'situacao'],
       matriculados_iftp: ['codturma', 'turma', 'unidade', 'curso', 'matriculado', 'situacao'],
-      participacao: ['presentes', 'ausentes', 'turmadescricao', 'turma', 'escola', 'curso']
+      participacao: ['presentes', 'ausentes', 'turmadescricao', 'turma', 'escola', 'curso'],
+      estudantes: ['municipio', 'escola', 'provagerada', 'tabulacao', 'homologado', 'curso', 'nome']
     };
 
     const targetKeywords = roleKeywords[fileRole] || ['codturma', 'turmadescricao', 'turma', 'escola', 'curso'];

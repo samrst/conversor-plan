@@ -140,4 +140,120 @@ export class DemoDataService {
       }
     };
   }
+
+  /**
+   * Generates sample in-memory datasets representing the 2 files for Prova Prática:
+   * 1. Participação (RelatorioParticipacaoTurmasProvas)
+   * 2. Estudantes (estudantes - BA)
+   */
+  static getDemoDatasetsPP() {
+    const partHeaders = [
+      'Departamento Regional (DR)',
+      'Unidade operacional (Escola)',
+      'Curso',
+      'Turma',
+      'Agendamento (horário de Brasília)',
+      'Presentes',
+      'Presentes (%)',
+      'Ausentes',
+      'Ausentes (%)',
+      'Total'
+    ];
+    const partRows = [
+      {
+        'Departamento Regional (DR)': 'SENAI-BA',
+        'Unidade operacional (Escola)': 'SENAI Dendezeiros',
+        'Curso': 'Técnico em Eletrotécnica',
+        'Turma': 'ELE-01-DENDEZEIROS',
+        'Agendamento (horário de Brasília)': '10/11/2026 08:00',
+        'Presentes': 15,
+        'Presentes (%)': '100%',
+        'Ausentes': 0,
+        'Ausentes (%)': '0%',
+        'Total': 15
+      },
+      {
+        'Departamento Regional (DR)': 'SENAI-BA',
+        'Unidade operacional (Escola)': 'SENAI Feira de Santana',
+        'Curso': 'Técnico em Eletromecânica',
+        'Turma': 'EM-02-FEIRA',
+        'Agendamento (horário de Brasília)': '10/11/2026 08:00',
+        'Presentes': 12,
+        'Presentes (%)': '92.3%',
+        'Ausentes': 1,
+        'Ausentes (%)': '7.7%',
+        'Total': 13
+      },
+      {
+        'Departamento Regional (DR)': 'SENAI-BA',
+        'Unidade operacional (Escola)': 'SENAI Lauro de Freitas',
+        'Curso': 'Técnico em Desenvolvimento de Sistemas',
+        'Turma': 'DS-03-LAURO',
+        'Agendamento (horário de Brasília)': '10/11/2026 08:00',
+        'Presentes': 20,
+        'Presentes (%)': '100%',
+        'Ausentes': 0,
+        'Ausentes (%)': '0%',
+        'Total': 20
+      },
+      {
+        'Departamento Regional (DR)': 'SENAI-BA',
+        'Unidade operacional (Escola)': 'SENAI - ITED',
+        'Curso': 'Técnico em Redes de Computadores',
+        'Turma': '117621 - DEDENZEIROS',
+        'Agendamento (horário de Brasília)': '10/11/2026 08:00',
+        'Presentes': 8,
+        'Presentes (%)': '100%',
+        'Ausentes': 0,
+        'Ausentes (%)': '0%',
+        'Total': 8
+      }
+    ];
+
+    const estHeaders = [
+      'MUNICIPIO',
+      'ESCOLA',
+      'NOME',
+      'PROVA GERADA',
+      'TABULAÇÃO',
+      'CURSO',
+      'HOMOLOGADO',
+      'CONFIRMACAO DO COORDENADOR'
+    ];
+    const estRows = [
+      // Dendezeiros - Eletrotecnica
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI Dendezeiros', NOME: 'Aluno 1', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Eletrotécnica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI Dendezeiros', NOME: 'Aluno 2', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Eletrotécnica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI Dendezeiros', NOME: 'Aluno 3', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'NÃO', CURSO: 'Técnico em Eletrotécnica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'NÃO' },
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI Dendezeiros', NOME: 'Aluno 4 (Inapto)', 'PROVA GERADA': 'NÃO', 'TABULAÇÃO': 'NÃO', CURSO: 'Técnico em Eletrotécnica', HOMOLOGADO: 'NÃO', 'CONFIRMACAO DO COORDENADOR': 'NÃO' },
+
+      // Feira de Santana - Eletromecanica
+      { MUNICIPIO: 'Feira de Santana', ESCOLA: 'SENAI Feira de Santana', NOME: 'Aluno 5', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Eletromecânica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Feira de Santana', ESCOLA: 'SENAI Feira de Santana', NOME: 'Aluno 6', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Eletromecânica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Feira de Santana', ESCOLA: 'SENAI Feira de Santana', NOME: 'Aluno 7', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Eletromecânica', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+
+      // ITED Lauro de Freitas
+      { MUNICIPIO: 'Lauro de Freitas', ESCOLA: 'SENAI - ITED', NOME: 'Aluno 8', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Desenvolvimento de Sistemas', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Lauro de Freitas', ESCOLA: 'SENAI - ITED', NOME: 'Aluno 9', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Desenvolvimento de Sistemas', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+
+      // ITED Salvador (Ambíguo para resolução manual)
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI - ITED', NOME: 'Aluno 10', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Redes de Computadores', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' },
+      { MUNICIPIO: 'Salvador', ESCOLA: 'SENAI - ITED', NOME: 'Aluno 11', 'PROVA GERADA': 'SIM', 'TABULAÇÃO': 'SIM', CURSO: 'Técnico em Redes de Computadores', HOMOLOGADO: 'SIM', 'CONFIRMACAO DO COORDENADOR': 'SIM' }
+    ];
+
+    return {
+      participacao: {
+        fileName: 'RelatorioParticipacaoTurmasProvas_DEMO.xlsx',
+        fileSize: 15400,
+        headers: partHeaders,
+        rows: partRows
+      },
+      estudantes: {
+        fileName: 'estudantes - BA_DEMO.xlsx',
+        fileSize: 21600,
+        headers: estHeaders,
+        rows: estRows
+      }
+    };
+  }
 }

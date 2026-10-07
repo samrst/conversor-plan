@@ -38,6 +38,8 @@
   </script>
 </head>
 <body>
+  <!-- Global Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Top Application Header -->
   <header class="app-header" id="appHeader">
@@ -48,13 +50,15 @@
         </div>
         <div class="brand-info">
           <h1>Consolidador de Macrodados</h1>
-          <span class="brand-badge">SENAI-BA • Processamento em Memória</span>
+          <div class="brand-context" title="Sistema de Avaliação da Educação Profissional • Processamento Local">
+            <img src="img/logo-saep.png" alt="SAEP" class="saep-logo">
+            <span class="context-text">&bull; Processamento Local</span>
+          </div>
         </div>
       </a>
 
       <div class="header-actions">
-        <div class="header-tag" title="Seus arquivos nunca saem deste computador">
-          <button type="button" class="btn btn-secondary btn-sm" id="btnHeaderReset" title="Iniciar nova conversão do zero">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnHeaderReset" title="Iniciar nova conversão do zero">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
             <path d="M21 3v5h-5"></path>
@@ -63,7 +67,6 @@
           </svg>
           Reiniciar
         </button>
-        </div>
       </div>
     </div>
   </header>
@@ -133,7 +136,7 @@
             </div>
             <div>
               <h2 class="card-title" id="step1Title">Selecione o Modelo de Conversão</h2>
-              <p class="card-description">Escolha a regra de negócio para a consolidação dos microdados.</p>
+              <p class="card-description">Escolha o modelo que deseja converter</p>
             </div>
           </div>
         </div>
@@ -173,24 +176,32 @@
             </ul>
           </div>
 
-          <!-- Model 2: Prova Prática (Coming Soon) -->
-          <div class="model-card disabled" data-model-id="prova-pratica" id="cardModelPratica" tabindex="-1" aria-disabled="true">
+          <!-- Model 2: Prova Prática (Active) -->
+          <div class="model-card" data-model-id="prova-pratica" id="cardModelPratica" tabindex="0" role="button" aria-pressed="false">
             <div class="model-card-top">
               <div class="model-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
                 </svg>
               </div>
-              <span class="model-badge badge-soon">Fase 2 • Em Breve</span>
+              <span class="model-badge badge-active">Ativo • Disponível</span>
             </div>
             <h3 class="model-name">Prova Prática</h3>
             <p class="model-desc">
-              Regras de negócio e consolidação de critérios específicos para avaliação prática serão disponibilizadas na próxima versão.
+              Consolidação de microdados de Estudantes (Homologados, Provas Geradas, Tabulação, Confirmação) e Participação (Prova Objetiva) em planilha padronizada de 18 colunas.
             </p>
             <ul class="model-features-list">
               <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-dim);"><circle cx="12" cy="12" r="10"></circle></svg>
-                Regras de negócio a serem definidas
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Agrupamento por Unidade Operacional e Curso com preservação de Modalidade
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Funil de Homologação, Aplicação, Tabulação e Confirmação de Coordenador
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Tratamento determinístico SENAI ITED e desambiguação de Salvador (CIMATEC / Dendezeiros)
               </li>
             </ul>
           </div>
@@ -326,6 +337,9 @@
           </div>
         </div>
 
+        <!-- Dynamic Pre-consolidation Summary -->
+        <div id="preConsolidationSummary"></div>
+
         <div id="mappingTablesContainer" style="display: flex; flex-direction: column; gap: 1.5rem;">
           <!-- Rendered dynamically by JS: Table for Aptos, Matriculados CHP, Matriculados IFTP, Participacao -->
         </div>
@@ -400,14 +414,30 @@
           <!-- Rendered dynamically if any inconsistencies occurred -->
         </div>
 
-        <!-- Table Controls / Search -->
+        <!-- Table Controls / Search & Filters -->
         <div class="table-toolbar">
-          <div class="search-input-wrapper">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" class="search-input" id="tableSearchInput" placeholder="Filtrar por escola, curso ou turma...">
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div class="search-input-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="search-input" id="tableSearchInput" placeholder="Filtrar por escola, curso ou turma...">
+            </div>
+
+            <div class="table-filter-tabs" id="tableFilterTabs">
+              <button type="button" class="filter-tab-btn active" data-filter="all" id="filterTabAll">
+                Todos (<span id="countAllRows">0</span>)
+              </button>
+              <button type="button" class="filter-tab-btn warning-tab" data-filter="warning" id="filterTabWarnings" style="display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Com atenção (<span id="countWarningRows">0</span>)
+              </button>
+            </div>
           </div>
 
           <div style="font-size: 0.8125rem; color: var(--text-muted);" id="tableRowCountLabel">
@@ -476,14 +506,190 @@
     </div>
   </div>
 
+  <!-- Reset Confirmation Modal -->
+  <div class="modal-overlay" id="modalConfirmReset" aria-hidden="true" role="dialog" aria-labelledby="modalResetTitle">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(239, 68, 68, 0.12); color: var(--accent-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="modalResetTitle">Reiniciar Conversão?</h3>
+            <p class="modal-subtitle">Os dados atuais serão descartados</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnResetModalClose" title="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 0.5rem 0;">
+        <p style="color: var(--text-muted); font-size: 0.875rem; line-height: 1.5;">
+          Tem certeza de que deseja reiniciar? Todos os arquivos carregados e mapeamentos configurados serão limpos para uma nova conversão.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnResetCancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnResetConfirm" style="background: var(--accent-danger); border-color: var(--accent-danger); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M8 16H3v5"></path>
+          </svg>
+          Sim, Reiniciar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Resolução Manual de Divergências -->
+  <div class="modal-overlay" id="modalResolveDiscrepancy" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalDiscrepancyTitle">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalDiscrepancyTitle">Resolver Divergência de Associação</h3>
+          <p class="modal-subtitle" id="modalDiscrepancySubtitle">Investigue as evidências e selecione um registro correspondente</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnDiscrepancyClose" title="Fechar modal" aria-label="Fechar modal de divergência">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalDiscrepancyBody" style="max-height: 480px;">
+        <!-- Source Details Box -->
+        <div class="discrepancy-source-box" id="discrepancySourceContainer">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Diagnostic Box -->
+        <div class="discrepancy-diag-box" id="discrepancyDiagnosticContainer">
+          <div class="discrepancy-diag-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="discrepancy-diag-text" id="discrepancyDiagnosticText">
+            Nenhuma correspondência automática foi encontrada nas bases carregadas utilizando <strong>Unidade + Curso + Turma normalizada</strong>.
+          </div>
+        </div>
+
+        <!-- Section: Candidates / Search -->
+        <div class="discrepancy-section-header">
+          <h4 class="discrepancy-section-title">Registros de Matriculados Disponíveis para Conferência</h4>
+          <span class="status-pill info" id="discrepancyCandidatesCountBadge" style="font-size: 0.725rem;">0 candidatos</span>
+        </div>
+
+        <!-- Search Input -->
+        <div class="search-input-wrapper" style="width: 100%; margin-bottom: 0.75rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" class="search-input" id="discrepancySearchInput" placeholder="Pesquisar por código, CODTURMA, unidade ou curso nas bases carregadas...">
+        </div>
+
+        <!-- Conflict Banner -->
+        <div class="alert-banner danger" id="discrepancyConflictBanner" style="display: none; margin-bottom: 0.75rem; padding: 0.75rem 1rem;">
+          <div class="alert-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <div class="alert-content" id="discrepancyConflictText" style="font-size: 0.825rem;">
+            Este registro já está associado a outra turma. Desfaça a associação existente antes de reutilizá-lo.
+          </div>
+        </div>
+
+        <!-- Candidates List Container -->
+        <div class="candidates-container" id="discrepancyCandidatesList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div id="discrepancyModalLeftActions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnDiscrepancyKeepUnassociated" title="Manter registro sem matrícula associada">
+            Manter sem associação
+          </button>
+          <button type="button" class="btn btn-danger-ghost btn-sm" id="btnDiscrepancyUndo" style="display: none;" title="Desfazer associação manual">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+            </svg>
+            Desfazer associação
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" class="btn btn-secondary" id="btnDiscrepancyCancel">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnDiscrepancyApply" disabled>
+            Associar Manualmente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmação de Associação Manual -->
+  <div class="modal-overlay" id="modalConfirmManualAssociation" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalConfirmAssocTitle">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); color: var(--brand-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="modalConfirmAssocTitle">Confirmar Associação Manual</h3>
+            <p class="modal-subtitle">Ação explícita do usuário</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnConfirmAssocClose" title="Fechar" aria-label="Fechar confirmação">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalConfirmAssocBody" style="padding: 0.5rem 0;">
+        <!-- Comparison Summary -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnConfirmAssocCancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmAssocExecute">
+          Confirmar Associação
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Application Footer -->
   <footer class="app-footer">
     <div class="footer-container">
-      <div>
-        <strong>Consolidador de Macrodados</strong> &bull; Conversor de Planilhas SAEP
+      <div class="footer-left">
+        <strong>Consolidador de Macrodados</strong> &bull; Sistema de Avaliação da Educação Profissional
       </div>
-      <div class="footer-privacy-badge" aria-hidden="true">
-          <img src="img/logo-saep.png" alt="SAEP" class="saep-logo">
+      <div class="footer-right">
+        <span>SENAI Bahia</span>
       </div>
     </div>
   </footer>

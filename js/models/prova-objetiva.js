@@ -417,6 +417,123 @@ export const ProvaObjetivaModel = {
   },
 
   /**
+   * Builds a catalog of all unique classes across matriculados files (CHP and IFTP)
+   * @param {Object} matriculadosChpData 
+   * @param {Object} matriculadosIftpData 
+   * @returns {Array<{ id: string, category: 'CHP'|'IFTP', unidade: string, normUnidade: string, curso: string, normCurso: string, turmaOriginal: string, turmaCode: string, alunos: number }>}
+   */
+  buildMatriculadosCatalog(matriculadosChpData, matriculadosIftpData) {
+    const catalogMap = new Map();
+
+    const processFile = (fileData, category) => {
+      if (!fileData || !fileData.rows) return;
+      const mappings = fileData.mappings || {};
+      const colCodTurma = mappings.CODTURMA;
+      const colUnidade = mappings.UNIDADE || mappings.ESCOLA;
+      const colCurso = mappings.CURSO;
+
+      if (!colCodTurma) return;
+
+      for (const row of fileData.rows) {
+        const rawCode = row[colCodTurma];
+        if (rawCode !== undefined && rawCode !== null && String(rawCode).trim() !== '') {
+          const rawUnidade = colUnidade ? String(row[colUnidade] || '').trim() : '';
+          const rawCurso = colCurso ? String(row[colCurso] || '').trim() : '';
+          const canonicalCurso = this.getCanonicalCurso(rawCurso);
+          const normTurma = this.normalizeCodTurma(rawCode);
+          const normUnidade = this.normalizeUnidade(rawUnidade);
+          const normCurso = this.normalizeCurso(canonicalCurso);
+
+          const catalogKey = `${category}___${normUnidade}___${normCurso}___${normTurma}`;
+
+          if (!catalogMap.has(catalogKey)) {
+            catalogMap.set(catalogKey, {
+              id: catalogKey,
+              category,
+              unidade: rawUnidade || 'Não informada',
+              normUnidade,
+              curso: canonicalCurso || 'Não informado',
+              normCurso,
+              turmaOriginal: String(rawCode).trim(),
+              turmaCode: normTurma,
+              alunos: 0
+            });
+          }
+
+          catalogMap.get(catalogKey).alunos += 1;
+        }
+      }
+    };
+
+    processFile(matriculadosChpData, 'CHP');
+    processFile(matriculadosIftpData, 'IFTP');
+
+    return Array.from(catalogMap.values());
+  },
+
+  /**
+   * Deterministically discovers candidate matriculados records for a given class
+   * Level 1: Same normalized class code across all units and courses
+   * Level 2: Same unit and same canonical course (different class code)
+   * Level 3: Same unit (different course and code)
+   * @param {string} unidadeOperacional 
+   * @param {string} cursoFinal 
+   * @param {string} turmaCode 
+   * @param {Array<Object>} catalog 
+   * @param {boolean} [excludeExact=true] 
+   * @returns {Array<Object>}
+   */
+  findCandidatesForClass(unidadeOperacional, cursoFinal, turmaCode, catalog, excludeExact = true) {
+    if (!catalog || catalog.length === 0) return [];
+
+    const normU = this.normalizeUnidade(unidadeOperacional);
+    const normC = this.normalizeCurso(cursoFinal);
+    const normT = this.normalizeCodTurma(turmaCode);
+
+    const candidates = [];
+
+    for (const item of catalog) {
+      const isExactMatch = item.normUnidade === normU && item.normCurso === normC && item.turmaCode === normT;
+      if (excludeExact && isExactMatch) {
+        continue;
+      }
+
+      if (item.turmaCode === normT) {
+        candidates.push({
+          ...item,
+          matchLevel: 1,
+          levelLabel: 'Nível 1 • Mesmo código normalizado'
+        });
+      } else if (item.normUnidade === normU && item.normCurso === normC) {
+        candidates.push({
+          ...item,
+          matchLevel: 2,
+          levelLabel: 'Nível 2 • Mesma unidade e curso'
+        });
+      } else if (item.normUnidade === normU) {
+        candidates.push({
+          ...item,
+          matchLevel: 3,
+          levelLabel: 'Nível 3 • Catálogo da unidade'
+        });
+      }
+    }
+
+    // Sort candidates deterministically: matchLevel ASC, category ASC, unidade ASC, curso ASC, turmaCode ASC
+    candidates.sort((a, b) => {
+      if (a.matchLevel !== b.matchLevel) return a.matchLevel - b.matchLevel;
+      if (a.category !== b.category) return a.category.localeCompare(b.category);
+      const uComp = a.unidade.localeCompare(b.unidade);
+      if (uComp !== 0) return uComp;
+      const cComp = a.curso.localeCompare(b.curso);
+      if (cComp !== 0) return cComp;
+      return a.turmaCode.localeCompare(b.turmaCode);
+    });
+
+    return candidates;
+  },
+
+  /**
    * Looks up matriculados count in an index using composite key (Unidade + Curso + TurmaCode)
    * @param {{ byComposite: Map, byTurmaOnly: Map }} index 
    * @param {string} unidade 
@@ -435,11 +552,13 @@ export const ProvaObjetivaModel = {
 
   /**
    * Processes all loaded files and produces the 13-column macro dataset.
-   * @param {Record<string, { rows: Array<Record<string, any>>, mappings: Record<string, string> }>} loadedFiles 
-   * @returns {{ columns: string[], rows: Array<Record<string, any>>, warnings: string[], stats: Object }}
+   * Supports manual overrides in loadedFiles.aptos.manualClassOverrides without mutating raw data.
+   * @param {Record<string, { rows: Array<Record<string, any>>, mappings: Record<string, string>, manualClassOverrides?: Record<string, any> }>} loadedFiles 
+   * @returns {{ columns: string[], rows: Array<Record<string, any>>, warnings: string[], discrepancies: Array<Object>, catalog: Array<Object>, stats: Object }}
    */
   process(loadedFiles) {
     const warnings = [];
+    const discrepancies = [];
 
     // 1. Validate required files exist
     const aptosData = loadedFiles.aptos;
@@ -478,6 +597,12 @@ export const ProvaObjetivaModel = {
     // 3. Build Matriculados Indexes for CHP and IFTP with Composite Keys
     const indexChp = this.buildMatriculadosIndex(matriculadosChpData);
     const indexIftp = this.buildMatriculadosIndex(matriculadosIftpData);
+
+    // Build Catalog of All Available Matriculados Classes
+    const catalog = this.buildMatriculadosCatalog(matriculadosChpData, matriculadosIftpData);
+
+    // Manual overrides layer stored separately in memory
+    const manualClassOverrides = aptosData.manualClassOverrides || {};
 
     // 4. Build Participação Index if provided
     const participacaoIndex = new Map();
@@ -528,6 +653,7 @@ export const ProvaObjetivaModel = {
 
       if (!classGroups.has(groupKey)) {
         classGroups.set(groupKey, {
+          groupKey: groupKey,
           escolaRaw: rawEscola,
           unidadeOperacional: unidadeOperacional,
           curso: canonicalCurso,
@@ -539,7 +665,7 @@ export const ProvaObjetivaModel = {
       classGroups.get(groupKey).records.push(row);
     }
 
-    // 6. Aggregate each group considering the Categoria dimension (CHP and IFTP)
+    // 6. Aggregate each group considering the Categoria dimension (CHP and IFTP) and Manual Overrides
     const macroRows = [];
     let totalMatriculados = 0;
     let totalAptosAgendados = 0;
@@ -548,7 +674,7 @@ export const ProvaObjetivaModel = {
     let totalAusentes = 0;
 
     for (const group of classGroups.values()) {
-      const { escolaRaw, unidadeOperacional, curso, turmaDescricao, records } = group;
+      const { groupKey, escolaRaw, unidadeOperacional, curso, turmaDescricao, records } = group;
 
       const dr = 'SENAI-BA';
       const cursoFinal = this.getCanonicalCurso(curso);
@@ -559,19 +685,85 @@ export const ProvaObjetivaModel = {
       // Total aptos records for this class
       const aptosCount = records.length;
 
-      // Check enrollment in both categories with composite key (Unidade + Curso + TurmaCode)
-      const countChp = this.lookupMatriculadosCount(indexChp, unidadeOperacional, cursoFinal, turmaCode);
-      const countIftp = this.lookupMatriculadosCount(indexIftp, unidadeOperacional, cursoFinal, turmaCode);
+      // Check if user has applied a manual override for this specific class group
+      const manualOverride = manualClassOverrides[groupKey] || null;
 
-      // Determine which categories this class belongs to
       const categoriesToEmit = [];
-      if (countChp > 0) categoriesToEmit.push({ cat: 'CHP', alunos: countChp });
-      if (countIftp > 0) categoriesToEmit.push({ cat: 'IFTP', alunos: countIftp });
 
-      // Fallback: If neither has > 0 enrolled students, emit CHP with warning
-      if (categoriesToEmit.length === 0) {
-        warnings.push(`Turma "${turmaFinal}" (${turmaDescricao}) na unidade "${unidadeOperacional}" não encontrou alunos matriculados em CHP nem IFTP.`);
-        categoriesToEmit.push({ cat: 'CHP', alunos: 0 });
+      if (manualOverride) {
+        // User explicitly resolved this discrepancy manually
+        const overrideCat = manualOverride.targetCategory || 'CHP';
+        const overrideAlunos = Number(manualOverride.matriculadosCount) || 0;
+
+        categoriesToEmit.push({
+          cat: overrideCat,
+          alunos: overrideAlunos,
+          isManual: true,
+          manualOverride: manualOverride
+        });
+
+        // Register structured discrepancy as RESOLVED
+        const candidates = this.findCandidatesForClass(unidadeOperacional, cursoFinal, turmaCode, catalog);
+        discrepancies.push({
+          id: groupKey,
+          groupKey: groupKey,
+          type: 'MANUAL_OVERRIDE',
+          source: {
+            unidade: unidadeOperacional,
+            curso: cursoFinal,
+            cursoCanonical: cursoFinal,
+            turmaOriginal: turmaDescricao,
+            turmaNormalizada: turmaFinal,
+            turmaCode: turmaCode,
+            modalidade: modalidade,
+            categoria: overrideCat,
+            aptosCount: aptosCount,
+            fileName: aptosData.fileName || '',
+            sheetName: aptosData.sheetName || ''
+          },
+          candidates: candidates,
+          manualOverride: manualOverride,
+          isResolved: true
+        });
+      } else {
+        // Check enrollment in both categories with composite key (Unidade + Curso + TurmaCode)
+        const countChp = this.lookupMatriculadosCount(indexChp, unidadeOperacional, cursoFinal, turmaCode);
+        const countIftp = this.lookupMatriculadosCount(indexIftp, unidadeOperacional, cursoFinal, turmaCode);
+
+        if (countChp > 0) categoriesToEmit.push({ cat: 'CHP', alunos: countChp, isManual: false });
+        if (countIftp > 0) categoriesToEmit.push({ cat: 'IFTP', alunos: countIftp, isManual: false });
+
+        // Fallback: If neither has > 0 enrolled students, emit CHP with warning and structured discrepancy
+        if (categoriesToEmit.length === 0) {
+          const candidates = this.findCandidatesForClass(unidadeOperacional, cursoFinal, turmaCode, catalog);
+          const hasLevel1 = candidates.some((c) => c.matchLevel === 1);
+          const discType = hasLevel1 ? 'OFF_KEY_CANDIDATES' : 'UNMATCHED_CLASS';
+
+          discrepancies.push({
+            id: groupKey,
+            groupKey: groupKey,
+            type: discType,
+            source: {
+              unidade: unidadeOperacional,
+              curso: cursoFinal,
+              cursoCanonical: cursoFinal,
+              turmaOriginal: turmaDescricao,
+              turmaNormalizada: turmaFinal,
+              turmaCode: turmaCode,
+              modalidade: modalidade,
+              categoria: 'CHP',
+              aptosCount: aptosCount,
+              fileName: aptosData.fileName || '',
+              sheetName: aptosData.sheetName || ''
+            },
+            candidates: candidates,
+            manualOverride: null,
+            isResolved: false
+          });
+
+          warnings.push(`Turma "${turmaFinal}" (${turmaDescricao}) na unidade "${unidadeOperacional}" não encontrou alunos matriculados em CHP nem IFTP.`);
+          categoriesToEmit.push({ cat: 'CHP', alunos: 0, isManual: false, isUnresolvedDiscrepancy: true });
+        }
       }
 
       // Lookup Participação for this class (Unidade + Curso + Turma)
@@ -607,7 +799,8 @@ export const ProvaObjetivaModel = {
       }
 
       // Generate distinct record for each category
-      for (const { cat, alunos } of categoriesToEmit) {
+      for (const catInfo of categoriesToEmit) {
+        const { cat, alunos, isManual, isUnresolvedDiscrepancy, manualOverride: rowOverride } = catInfo;
         const inaptosNaoAgendados = Math.max(0, alunos - aptosCount);
 
         totalMatriculados += alunos;
@@ -629,7 +822,14 @@ export const ProvaObjetivaModel = {
           'Presentes': presentes,
           'Presentes (%)': presentesPct,
           'Ausentes': ausentes,
-          'Ausentes (%)': ausentesPct
+          'Ausentes (%)': ausentesPct,
+          // Internal UI helper properties (never exported to Excel)
+          _groupKey: groupKey,
+          _turmaOriginal: turmaDescricao,
+          _turmaCode: turmaCode,
+          _isManualAssociation: !!isManual,
+          _hasWarning: !!isUnresolvedDiscrepancy || alunos === 0,
+          _manualOverride: rowOverride || null
         });
       }
     }
@@ -651,6 +851,8 @@ export const ProvaObjetivaModel = {
       columns: PROVA_OBJETIVA_COLUMNS,
       rows: macroRows,
       warnings,
+      discrepancies,
+      catalog,
       stats: {
         totalTurmas: macroRows.length,
         totalMatriculados,
@@ -658,7 +860,10 @@ export const ProvaObjetivaModel = {
         totalInaptosNaoAgendados,
         totalPresentes,
         totalAusentes,
-        taxaPresencaGeral
+        taxaPresencaGeral,
+        totalDiscrepancies: discrepancies.length,
+        pendingDiscrepancies: discrepancies.filter((d) => !d.isResolved).length,
+        resolvedDiscrepancies: discrepancies.filter((d) => d.isResolved).length
       }
     };
   }
